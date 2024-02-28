@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=cs552_2
-#SBATCH --output=~/cs552/run4.txt
-#SBATCH --error=~/cs552/run4.err
+#SBATCH --output=/home/ijr44/cs552/run4.txt
+#SBATCH --error=/home/ijr44/cs552/run4.txt
 #SBATCH --time=100:00				# 2 min
-#SBATCH --mem=90G
+#SBATCH --mem=100G
 #SBATCH --nodes=2
 #SBATCH --ntasks=12
 #SBATCH --cpus-per-task=1
