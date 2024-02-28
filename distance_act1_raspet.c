@@ -96,6 +96,8 @@ int main(int argc, char **argv) {
     }
   }
 
+  double tstart = MPI_Wtime();
+
   //Write code here
   double dataset_literal[N][DIM];
 
@@ -132,6 +134,10 @@ int main(int argc, char **argv) {
 
   MPI_Barrier(MPI_COMM_WORLD);
 
+  double tend = MPI_Wtime();
+
+  double time = tend - tstart;
+
   // MPI_Gather(lines, 
   //            N*blocksize,
   //            MPI_DOUBLE,
@@ -162,10 +168,12 @@ int main(int argc, char **argv) {
     0,
     MPI_COMM_WORLD
   );
-  
-  if (my_rank == 0)
-    printf("Total: %f\n", count);
 
+  if (my_rank == 0){
+    printf("Total: %f\n", count);
+    printf("Time: %f\n", time);
+  }
+    
   //free dataset
   for (int i=0; i<N; i++)
   {
