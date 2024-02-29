@@ -96,9 +96,11 @@ int main(int argc, char **argv) {
     }
   }
 
+  // begin the time count
   double tstart = MPI_Wtime();
 
-  //Write code here
+  // declare a dataset on the stack to ensure all
+  // memory is allocated as a large chuck for scattering
   double dataset_literal[N][DIM];
 
   for (int i = 0; i < N; ++i) {
@@ -107,9 +109,18 @@ int main(int argc, char **argv) {
     }
   }
 
+  // declare local data
   double local_data[blocksize][DIM];
 
-  double matrix[N][N];
+  // declare output matrix -- this is only relavent for rank 0
+  double **matrix;
+
+  if(my_rank == 0) {
+    matrix = (double **)malloc(N * sizeof(double *));
+    for (size_t i = 0; i < N; ++i) {
+      matrix[i] = (double *)malloc(sizeof(double));
+    }
+  }
 
   //rank zero scatters and sends ranges to all ranks
   MPI_Scatter(dataset_literal,
@@ -178,6 +189,13 @@ int main(int argc, char **argv) {
   for (int i=0; i<N; i++)
   {
     free(dataset[i]);
+  }
+
+  if (my_rank == 0) {
+    for(size_t i = 0; i < N; ++i) {
+      free(matrix[i]);
+    }
+    free(matrix);
   }
 
   free(dataset);

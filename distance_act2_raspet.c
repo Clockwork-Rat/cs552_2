@@ -107,7 +107,14 @@ int main(int argc, char **argv) {
 
   double local_data[blocksize][DIM];
 
-  double matrix[N][N];
+  double **matrix;
+
+  if(my_rank == 0) {
+    matrix = (double **)malloc(N * sizeof(double *));
+    for (size_t i = 0; i < N; ++i) {
+      matrix[i] = (double *)malloc(sizeof(double));
+    }
+  }
 
   //rank zero scatters and sends ranges to all ranks
   MPI_Scatter(dataset_literal,
@@ -123,28 +130,36 @@ int main(int argc, char **argv) {
   //other ranks wait to receive locations from 0
   double lines[blocksize][N];
   size_t b = 3;
+
+  // time calculation
+  double tstart = MPI_Wtime();
   
   // tiling
   size_t i = 0;
   size_t j = 0;
 
+  // make sure that all tiles have been addressed
+  // this is the point of the while loop
   while(i < N && j < blocksize) {
     size_t target_i = i + b;
+    // loop over rows to either the end of the row or the 
+    // end of the entire matrix
     for(;i < target_i && i < N; ++i) {
       size_t target_j = j + b;
+      // loop over columns until the end of the row or the 
+      // end of the block
       for(;j < blocksize && j < target_j; ++j) {
+        // calculate specific distance
         lines[i][j] = calc_distance(local_data[i], dataset[j], DIM);
       }
     }
   }
 
-  for(size_t i = 0; i < blocksize; ++i) {
-    for(size_t element=0; element < N; ++element) {
-      lines[i][element] = calc_distance(local_data[i], dataset[element], DIM);
-    }
-  }
-
+  // make sure all ranks have gotten to this point
   MPI_Barrier(MPI_COMM_WORLD);
+
+  // end timer
+  double tend = MPI_Wtime();
 
   //MPI_Gather(lines, 
   //           N*blocksize,
@@ -167,8 +182,10 @@ int main(int argc, char **argv) {
     MPI_COMM_WORLD
   );
 
-  if(my_rank == 0)
+  if(my_rank == 0){
     printf("Total: %f\n", count);
+    printf("Time: %f\n", tend - tstart);
+  }
 
   // print matrix
   //if (my_rank == 0) {
@@ -187,6 +204,13 @@ int main(int argc, char **argv) {
   }
 
   free(dataset);
+
+  if (my_rank == 0) {
+    for(size_t i = 0; i < N; ++i) {
+      free(matrix[i]);
+    }
+    free(matrix);
+  }
 
   MPI_Finalize();
 
