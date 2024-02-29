@@ -98,6 +98,7 @@ int main(int argc, char **argv) {
 
   // begin the time count
   double tstart = MPI_Wtime();
+  int send_size = N/nprocs;
 
   // declare a dataset on the stack to ensure all
   // memory is allocated as a large chuck for scattering
@@ -110,7 +111,7 @@ int main(int argc, char **argv) {
   }
 
   // declare local data
-  double local_data[blocksize][DIM];
+  double local_data[send_size][DIM];
 
   // declare output matrix -- this is only relavent for rank 0
   double **matrix;
@@ -124,19 +125,19 @@ int main(int argc, char **argv) {
 
   //rank zero scatters and sends ranges to all ranks
   MPI_Scatter(dataset_literal,
-              blocksize*DIM,
+              send_size*DIM,
               MPI_DOUBLE,
               local_data,
-              blocksize*DIM,
+              send_size*DIM,
               MPI_DOUBLE,
               0, 
               MPI_COMM_WORLD
               );
 
   //other ranks wait to receive locations from 0
-  double lines[blocksize][N];
+  double lines[send_size][N];
   // do one line and send line number
-  for(size_t i = 0; i < blocksize; ++i) {
+  for(size_t i = 0; i < send_size; ++i) {
     // do one line and send line number
     for(size_t element=0; element < N; ++element) {
       lines[i][element] = calc_distance(local_data[i], dataset[element], DIM);
@@ -150,10 +151,10 @@ int main(int argc, char **argv) {
   double time = tend - tstart;
 
   // MPI_Gather(lines, 
-  //            N*blocksize,
+  //            N*send_size,
   //            MPI_DOUBLE,
   //            matrix,
-  //            N*blocksize,
+  //            N*send_size,
   //            MPI_DOUBLE, 
   //            0, 
   //            MPI_COMM_WORLD);
@@ -173,7 +174,7 @@ int main(int argc, char **argv) {
   MPI_Reduce(
     lines,
     &count,
-    N*blocksize,
+    N*send_size,
     MPI_DOUBLE,
     MPI_SUM,
     0,

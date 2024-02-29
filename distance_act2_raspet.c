@@ -96,6 +96,8 @@ int main(int argc, char **argv) {
     }
   }
 
+  int send_size = N/nprocs;
+
   //Write code here
   double dataset_literal[N][DIM];
 
@@ -105,7 +107,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  double local_data[blocksize][DIM];
+  double local_data[send_size][DIM];
 
   double **matrix;
 
@@ -118,18 +120,17 @@ int main(int argc, char **argv) {
 
   //rank zero scatters and sends ranges to all ranks
   MPI_Scatter(dataset_literal,
-              blocksize*DIM,
+              send_size*DIM,
               MPI_DOUBLE,
               local_data,
-              blocksize*DIM,
+              send_size*DIM,
               MPI_DOUBLE,
               0, 
               MPI_COMM_WORLD
               );
 
   //other ranks wait to receive locations from 0
-  double lines[blocksize][N];
-  size_t b = 3;
+  double lines[send_size][N];
 
   // time calculation
   double tstart = MPI_Wtime();
@@ -140,15 +141,15 @@ int main(int argc, char **argv) {
 
   // make sure that all tiles have been addressed
   // this is the point of the while loop
-  while(i < N && j < blocksize) {
-    size_t target_i = i + b;
+  while(i < N && j < send_size) {
+    size_t target_i = i + blocksize;
     // loop over rows to either the end of the row or the 
     // end of the entire matrix
     for(;i < target_i && i < N; ++i) {
-      size_t target_j = j + b;
+      size_t target_j = j + blocksize;
       // loop over columns until the end of the row or the 
       // end of the block
-      for(;j < blocksize && j < target_j; ++j) {
+      for(;j < send_size && j < target_j; ++j) {
         // calculate specific distance
         lines[i][j] = calc_distance(local_data[i], dataset[j], DIM);
       }
@@ -162,10 +163,10 @@ int main(int argc, char **argv) {
   double tend = MPI_Wtime();
 
   //MPI_Gather(lines, 
-  //           N*blocksize,
+  //           N*send_size,
   //           MPI_DOUBLE,
   //           matrix,
-  //           N*blocksize,
+  //           N*send_size,
   //           MPI_DOUBLE, 
   //           0, 
   //           MPI_COMM_WORLD);
@@ -175,7 +176,7 @@ int main(int argc, char **argv) {
   MPI_Reduce(
     lines,
     &count,
-    N*blocksize,
+    N*send_size,
     MPI_DOUBLE,
     MPI_SUM,
     0,
